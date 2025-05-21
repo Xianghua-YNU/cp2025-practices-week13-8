@@ -74,6 +74,17 @@ def plot_energy_functions(E_values, y1, y2, y3):
     # 添加水平和垂直参考线
     ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
     ax.axvline(x=0, color='k', linestyle='--', alpha=0.3)
+    
+    # 设置坐标轴范围，限制y轴范围以便更清晰地看到交点
+    ax.set_xlim(0, 20)
+    ax.set_ylim(-10, 10)
+    
+    # 添加标签和标题
+    ax.set_xlabel('Energy E (eV)')
+    ax.set_ylabel('Function value')
+    ax.set_title('Square Potential Well Energy Levels')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
     return fig
 
 
@@ -97,8 +108,26 @@ def find_energy_level_bisection(n, V, w, m, precision=0.001, E_min=0.001, E_max=
     # [STUDENT_CODE_HERE]
     # 提示: 需要考虑能级的奇偶性，偶数能级使用偶宇称方程，奇数能级使用奇宇称方程
     
-    raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
+    #raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
+    if E_max is None:
+        E_max = V - 0.001  # 避免在V处的奇点
     
+    # 根据能级序号n选择合适的方程
+    if n % 2 == 0:  # 偶数能级 (0, 2, 4, ...)
+        equation = lambda E: energy_equation_even(E, V, w, m)
+    else:  # 奇数能级 (1, 3, 5, ...)
+        equation = lambda E: energy_equation_odd(E, V, w, m)
+    
+    # 初始化搜索区间
+    a, b = E_min, E_max
+    
+    # 检查区间端点的函数值符号是否相反
+    fa, fb = equation(a), equation(b)
+    if fa * fb > 0:
+        # 如果端点函数值符号相同，需要调整搜索区间
+        # 这里简化处理，实际应用中可能需要更复杂的策略
+        # 例如，可以在区间内采样多个点，寻找函数值符号变化的区间
+        raise ValueError(f"无法在给定区间 [{a}, {b}] 内找到第 {n} 个能级")
     return energy_level
 
 
