@@ -1,115 +1,155 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+白炽灯温度优化 - 计算最优工作温度（参考答案）
+
+本模块基于普朗克黑体辐射定律计算白炽灯效率，并使用黄金分割法寻找最佳工作温度。
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import quad
+from scipy import integrate
 from scipy.optimize import minimize_scalar
 
 # 物理常数
-h = 6.626e-34  # 普朗克常数 (J·s)
-c = 2.998e8    # 光速 (m/s)
-kB = 1.381e-23 # 玻尔兹曼常数 (J/K)
-lambda1 = 390e-9  # 可见光下限 (m)
-lambda2 = 750e-9  # 可见光上限 (m)
+H = 6.62607015e-34  # 普朗克常数 (J·s)
+C = 299792458       # 光速 (m/s)
+K_B = 1.380649e-23  # 玻尔兹曼常数 (J/K)
 
-def planck_integrand(x):
-    """普朗克辐射定律积分内核函数"""
-    return x**3 / (np.exp(x) - 1)
+# 可见光波长范围 (m)
 
-def efficiency(T):
-    """计算给定温度T下的发光效率"""
-    # 计算积分上下限
-    x1 = h * c / (lambda2 * kB * T)
-    x2 = h * c / (lambda1 * kB * T)
-    
-    # 数值积分
-    integral, _ = quad(planck_integrand, x1, x2)
-    
-    # 计算效率 (单位: %)
-    eta = (15 / np.pi**4) * integral * 100
-    return eta
+VISIBLE_LIGHT_MIN = 380e-9  # 380 nm
+VISIBLE_LIGHT_MAX = 780e-9  # 780 nm
 
-def find_optimal_temperature(bracket=(2000, 4000)):
-    """使用黄金分割法寻找最优温度"""
-    # 定义目标函数 (添加负号以便使用最小化算法)
-    objective = lambda T: -efficiency(T)
-    
-    # 使用黄金分割法进行优化
-    result = minimize_scalar(objective, method='golden', bracket=bracket, tol=1e-1)
-    
-    # 计算最优温度和最大效率
-    T_opt = result.x
-    eta_max = -result.fun
-    
-    return T_opt, eta_max
 
-def plot_efficiency_vs_temperature(T_range=(300, 10000), num_points=500):
-    """绘制效率随温度变化的曲线"""
-    # 生成温度数组
-    T_array = np.linspace(T_range[0], T_range[1], num_points)
-    eta_array = np.array([efficiency(T) for T in T_array])
+def planck_law(wavelength, temperature):
+    """
+    计算普朗克黑体辐射公式
     
-    # 创建图表
-    plt.figure(figsize=(10, 6))
-    plt.plot(T_array, eta_array, 'b-', linewidth=2)
+    参数:
+        wavelength (float or numpy.ndarray): 波长，单位为米
+        temperature (float): 温度，单位为开尔文
     
-    # 标记实际工作温度点
-    T_actual = 2700
-    eta_actual = efficiency(T_actual)
-    plt.scatter(T_actual, eta_actual, color='red', s=100, zorder=5)
-    plt.annotate(f'实际工作点: {T_actual}K, {eta_actual:.2f}%',
-                xy=(T_actual, eta_actual),
-                xytext=(T_actual + 500, eta_actual + 0.5),
-                arrowprops=dict(facecolor='black', shrink=0.05, width=1.5))
+    返回:
+        float or numpy.ndarray: 给定波长和温度下的辐射强度 (W/(m²·m))
+    """
+    numerator = 2.0 * H * C**2 / (wavelength**5)
+    exponent = np.exp(H * C / (wavelength * K_B * temperature))
+    intensity = numerator / (exponent - 1.0)
+    return intensity
+
+
+def calculate_visible_power_ratio(temperature):
+    """
+    计算给定温度下可见光功率与总辐射功率的比值
     
-    # 标记理论最优温度点
-    T_opt, eta_max = find_optimal_temperature()
-    plt.scatter(T_opt, eta_max, color='green', s=100, zorder=5)
-    plt.annotate(f'理论最优点: {T_opt:.0f}K, {eta_max:.2f}%',
-                xy=(T_opt, eta_max),
-                xytext=(T_opt - 2000, eta_max - 0.5),
-                arrowprops=dict(facecolor='black', shrink=0.05, width=1.5))
+    参数:
+        temperature (float): 温度，单位为开尔文
     
-    # 设置图表属性
-    plt.title('白炽灯发光效率 vs 温度', fontsize=16)
-    plt.xlabel('温度 (K)', fontsize=14)
-    plt.ylabel('发光效率 (%)', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.xlim(T_range)
-    plt.ylim(0, 12)
+    返回:
+        float: 可见光效率（可见光功率/总功率）
+    """
+    def intensity_function(wavelength):
+        return planck_law(wavelength, temperature)
     
-    # 标记钨丝熔点
-    plt.axvline(x=3695, color='gray', linestyle='--', alpha=0.5)
-    plt.text(3700, 10, '钨丝熔点 (3695K)', rotation=90, fontsize=12)
+    visible_power, _ = integrate.quad(intensity_function, VISIBLE_LIGHT_MIN, VISIBLE_LIGHT_MAX)
+    total_power, _ = integrate.quad(intensity_function, 1e-9, 10000e-9)
+    visible_power_ratio = visible_power / total_power
+    return visible_power_ratio
+
+
+def plot_efficiency_vs_temperature(temp_range):
+    """
+    绘制效率-温度关系曲线
     
-    return plt.gcf()
+    参数:
+        temp_range (numpy.ndarray): 温度范围，单位为开尔文
+    
+    返回:
+        tuple: (matplotlib.figure.Figure, numpy.ndarray, numpy.ndarray) 图形对象、温度数组、效率数组
+    """
+    efficiencies = np.array([calculate_visible_power_ratio(temp) for temp in temp_range])
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(temp_range, efficiencies, 'b-')
+    
+    max_idx = np.argmax(efficiencies)
+    max_temp = temp_range[max_idx]
+    max_efficiency = efficiencies[max_idx]
+    
+    ax.plot(max_temp, max_efficiency, 'ro', markersize=8)
+    ax.text(max_temp, max_efficiency * 0.95, 
+            f'Max efficiency: {max_efficiency:.4f}\nTemperature: {max_temp:.1f} K', 
+            ha='center')
+    
+    ax.set_title('Incandescent Lamp Efficiency vs Temperature')
+    ax.set_xlabel('Temperature (K)')
+    ax.set_ylabel('Visible Light Efficiency')
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    
+    return fig, temp_range, efficiencies
+
+
+
+def find_optimal_temperature():
+    """
+    寻找使白炽灯效率最大的最优温度
+    
+    返回:
+        tuple: (float, float) 最优温度和对应的效率
+    """
+    def objective(temperature):
+        return -calculate_visible_power_ratio(temperature)
+    
+    # 使用scipy的minimize_scalar函数
+    result = minimize_scalar(
+        objective,
+        bounds=(1000, 10000),
+        method='bounded',
+        options={'xatol': 1.0}  # 精度1K
+    )
+    
+    optimal_temp = result.x
+    optimal_efficiency = -result.fun
+    return optimal_temp, optimal_efficiency
+
 
 def main():
-    """主函数：执行计算和分析"""
-    # 计算理论最优温度
-    T_opt, eta_max = find_optimal_temperature()
-    print(f"理论最优温度 T_opt = {T_opt:.0f} K")
-    print(f"最大发光效率 η_max = {eta_max:.2f} %")
-    
-    # 计算实际工作温度下的效率
-    T_actual = 2700
-    eta_actual = efficiency(T_actual)
-    print(f"实际工作温度 T_actual = {T_actual} K")
-    print(f"实际发光效率 η_actual = {eta_actual:.2f} %")
-    
+    """
+    主函数，计算并可视化最优温度
+    """
     # 绘制效率-温度曲线
-    fig = plot_efficiency_vs_temperature()
-    plt.tight_layout()
+    temp_range = np.linspace(1000, 10000, 100)
+    fig_efficiency, temps, effs = plot_efficiency_vs_temperature(temp_range)
     plt.savefig('efficiency_vs_temperature.png', dpi=300)
     plt.show()
     
-    # 可行性分析
-    print("\n=== 可行性分析 ===")
-    print(f"钨丝熔点: 3695 K")
-    print(f"理论最优温度与熔点差距: {3695 - T_opt:.0f} K")
-    print(f"实际温度与理论最优温度差距: {T_opt - T_actual:.0f} K")
+    # 计算最优温度
+    optimal_temp, optimal_efficiency = find_optimal_temperature()
+    print(f"\n最优温度: {optimal_temp:.1f} K")
+    print(f"最大效率: {optimal_efficiency:.4f} ({optimal_efficiency*100:.2f}%)")
     
-    # 效率提升潜力
-    improvement = (eta_max / eta_actual - 1) * 100
-    print(f"理论上效率可提升: {improvement:.1f}%")
+    # 与实际白炽灯温度比较
+    actual_temp = 2700
+    actual_efficiency = calculate_visible_power_ratio(actual_temp)
+    print(f"\n实际灯丝温度: {actual_temp} K")
+    print(f"实际效率: {actual_efficiency:.4f} ({actual_efficiency*100:.2f}%)")
+    print(f"效率差异: {(optimal_efficiency - actual_efficiency)*100:.2f}%")
+    
+    # 标记最优和实际温度点
+    plt.figure(figsize=(10, 6))
+    plt.plot(temps, effs, 'b-')
+    plt.plot(optimal_temp, optimal_efficiency, 'ro', markersize=8, label=f'Optimal: {optimal_temp:.1f} K')
+    plt.plot(actual_temp, actual_efficiency, 'go', markersize=8, label=f'Actual: {actual_temp} K')
+    plt.xlabel('Temperature (K)')
+    plt.ylabel('Visible Light Efficiency')
+    plt.title('Incandescent Lamp Efficiency vs Temperature')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.savefig('optimal_temperature.png', dpi=300)
+    plt.show()
+
 
 if __name__ == "__main__":
     main()
