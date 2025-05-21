@@ -32,8 +32,14 @@ def calculate_y_values(E_values, V, w, m):
     # [STUDENT_CODE_HERE]
     # 提示: 注意单位转换和避免数值计算中的溢出或下溢
     
-    raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
-    
+    #raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
+    E_J = E_values * EV_TO_JOULE
+    V_J = V * EV_TO_JOULE
+    # 计算中间变量
+    arg = np.sqrt((w ** 2 * m * E_J) / (2 * HBAR ** 2))
+    y1 = np.tan(arg)
+    y2 = np.sqrt((V_J - E_J) / E_J)
+    y3 = -np.sqrt(E_J / (V_J - E_J))
     return y1, y2, y3
 
 
@@ -54,8 +60,15 @@ def plot_energy_functions(E_values, y1, y2, y3):
     # [STUDENT_CODE_HERE]
     # 提示: 使用不同颜色和线型，添加适当的标签、图例和标题
     
-    raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
-    
+    #raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
+    fig, ax = plt.subplots()
+    ax.plot(E_values, y1, label='y1 = tan(sqrt(w^2*m*E/2h^2))', color='blue', linestyle='-')
+    ax.plot(E_values, y2, label='y2 = sqrt((V - E)/E)', color='red', linestyle='--')
+    ax.plot(E_values, y3, label='y3 = -sqrt(E/(V - E))', color='green', linestyle='-.')
+    ax.set_xlabel('Energy E (eV)')
+    ax.set_ylabel('y - values')
+    ax.set_title('Energy - level equations for a particle in a square - well potential')
+    ax.legend()
     return fig
 
 
