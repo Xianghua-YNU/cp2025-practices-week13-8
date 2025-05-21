@@ -36,10 +36,14 @@ def calculate_y_values(E_values, V, w, m):
     E_J = E_values * EV_TO_JOULE
     V_J = V * EV_TO_JOULE
     # 计算中间变量
-    arg = np.sqrt((w ** 2 * m * E_J) / (2 * HBAR ** 2))
+    arg = np.sqrt(((w**2 * m) / (2 * HBAR**2) *E_J))
     y1 = np.tan(arg)
-    y2 = np.sqrt((V_J - E_J) / E_J)
-    y3 = -np.sqrt(E_J / (V_J - E_J))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        y2 = np.sqrt((V_J - E_J) / E_J)
+        y3 = -np.sqrt(E_J / (V_J - E_J))
+    y1 = np.where(np.isfinite(y1), y1, np.nan)
+    y2 = np.where(np.isfinite(y2), y2, np.nan)
+    y3 = np.where(np.isfinite(y3), y3, np.nan)
     return y1, y2, y3
 
 
@@ -61,14 +65,15 @@ def plot_energy_functions(E_values, y1, y2, y3):
     # 提示: 使用不同颜色和线型，添加适当的标签、图例和标题
     
     #raise NotImplementedError("请在 {} 中实现此函数。".format(__file__))
-    fig, ax = plt.subplots()
-    ax.plot(E_values, y1, label='y1 = tan(sqrt(w^2*m*E/2h^2))', color='blue', linestyle='-')
-    ax.plot(E_values, y2, label='y2 = sqrt((V - E)/E)', color='red', linestyle='--')
-    ax.plot(E_values, y3, label='y3 = -sqrt(E/(V - E))', color='green', linestyle='-.')
-    ax.set_xlabel('Energy E (eV)')
-    ax.set_ylabel('y - values')
-    ax.set_title('Energy - level equations for a particle in a square - well potential')
-    ax.legend()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    # 绘制三个函数曲线
+    ax.plot(E_values, y1, 'b-', label=r'$y_1 = \tan\sqrt{w^2mE/2\hbar^2}$')
+    ax.plot(E_values, y2, 'r-', label=r'$y_2 = \sqrt{\frac{V-E}{E}}$ (偶宇称)')
+    ax.plot(E_values, y3, 'g-', label=r'$y_3 = -\sqrt{\frac{E}{V-E}}$ (奇宇称)')
+    
+    # 添加水平和垂直参考线
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
+    ax.axvline(x=0, color='k', linestyle='--', alpha=0.3)
     return fig
 
 
