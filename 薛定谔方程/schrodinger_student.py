@@ -124,10 +124,24 @@ def find_energy_level_bisection(n, V, w, m, precision=0.001, E_min=0.001, E_max=
     # 检查区间端点的函数值符号是否相反
     fa, fb = equation(a), equation(b)
     if fa * fb > 0:
-        # 如果端点函数值符号相同，需要调整搜索区间
-        # 这里简化处理，实际应用中可能需要更复杂的策略
-        # 例如，可以在区间内采样多个点，寻找函数值符号变化的区间
         raise ValueError(f"无法在给定区间 [{a}, {b}] 内找到第 {n} 个能级")
+        # 二分法迭代
+    while (b - a) > precision:
+        c = (a + b) / 2  # 区间中点
+        fc = equation(c)
+        
+        if abs(fc) < 1e-10:  # 如果中点非常接近根
+            return c
+        
+        if fa * fc < 0:  # 如果根在左半区间
+            b = c
+            fb = fc
+        else:  # 如果根在右半区间
+            a = c
+            fa = fc
+    
+    # 返回区间中点作为近似解
+    return (a + b) / 2
     return energy_level
 
 
