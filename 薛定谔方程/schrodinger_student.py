@@ -87,7 +87,34 @@ def plot_energy_functions(E_values, y1, y2, y3):
     ax.grid(True, alpha=0.3)
     return fig
 
+def energy_equation_even(E, V, w, m):
+    """
+    偶宇称能级方程: tan(sqrt(w^2*m*E/(2*hbar^2))) = sqrt((V-E)/E)
+    返回两边的差值，用于求根
+    """
+    E_joule = E * EV_TO_JOULE
+    V_joule = V * EV_TO_JOULE
+    factor = (w**2 * m) / (2 * HBAR**2)
+    
+    left = np.tan(np.sqrt(factor * E_joule))
+    right = np.sqrt((V_joule - E_joule) / E_joule)
+    
+    return left - right
 
+def energy_equation_odd(E, V, w, m):
+    """
+    奇宇称能级方程: tan(sqrt(w^2*m*E/(2*hbar^2))) = -sqrt(E/(V-E))
+    返回两边的差值，用于求根
+    """
+    E_joule = E * EV_TO_JOULE
+    V_joule = V * EV_TO_JOULE
+    factor = (w**2 * m) / (2 * HBAR**2)
+    
+    left = np.tan(np.sqrt(factor * E_joule))
+    right = -np.sqrt(E_joule / (V_joule - E_joule))
+    
+    return left - right
+    
 def find_energy_level_bisection(n, V, w, m, precision=0.001, E_min=0.001, E_max=None):
     """
     使用二分法求解方势阱中的第n个能级
@@ -142,7 +169,6 @@ def find_energy_level_bisection(n, V, w, m, precision=0.001, E_min=0.001, E_max=
     
     # 返回区间中点作为近似解
     return (a + b) / 2
-    return energy_level
 
 
 def main():
